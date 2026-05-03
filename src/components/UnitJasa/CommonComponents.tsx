@@ -61,7 +61,7 @@ export const CustomerSelector: React.FC<CustomerSelectorProps> = ({
             className="bg-slate-950/80 border border-white/10 text-slate-200 p-3 rounded-xl text-sm focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all appearance-none"
           >
             <option value="">-- SELECT MEMBER --</option>
-            {anggotaList.map((a) => (
+            {anggotaList?.map((a) => (
               <option key={a.id_anggota} value={a.id_anggota}>
                 {a.nama} ({a.id_anggota})
               </option>

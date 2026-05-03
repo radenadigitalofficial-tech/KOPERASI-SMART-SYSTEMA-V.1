@@ -55,7 +55,7 @@ export default function PPOBModule({ anggotaList }: { anggotaList: any[] }) {
   useEffect(() => {
     const q = query(collection(db, 'service_ppob'), orderBy('createdAt', 'desc'));
     const unsub = onSnapshot(q, (snapshot) => {
-      setData(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as PPOBTransaction)));
+      setData(snapshot.docs?.map(d => ({ id: d.id, ...d.data() } as PPOBTransaction)));
       setLoading(false);
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'service_ppob'));
     return () => unsub();
@@ -311,7 +311,7 @@ export default function PPOBModule({ anggotaList }: { anggotaList: any[] }) {
                     <p className="text-xs font-mono text-slate-500 uppercase tracking-widest">No matching transaction nodes found in registry.</p>
                   </td>
                 </tr>
-              ) : filteredData.map((item) => (
+              ) : filteredData?.map((item) => (
                 <tr key={item.id} className="border-b border-white/5 hover:bg-white/5 transition-colors group">
                   <td className="p-6">
                     <div className="text-xs font-bold text-white uppercase">{item.type}</div>

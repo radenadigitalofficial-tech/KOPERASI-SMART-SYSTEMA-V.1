@@ -17,7 +17,7 @@ import {
   CartesianGrid,
   Tooltip,
 } from "recharts";
-import UltraSafeChart from "./charts/UltraSafeChart";
+import SafeChartContainer from "./SafeChartContainer";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   Package, 
@@ -64,6 +64,25 @@ export default function ProductPurchaseModule({ products, suppliers, categories 
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCategory, setNewCategory] = useState("");
 
+  // Modal Cleanup & Management
+  useEffect(() => {
+    if (showCategoryModal) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "auto";
+    }
+    
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowCategoryModal(false);
+    };
+    
+    window.addEventListener("keydown", handleEsc);
+    return () => {
+      document.body.style.overflow = "auto";
+      window.removeEventListener("keydown", handleEsc);
+    };
+  }, [showCategoryModal]);
+
   const [form, setForm] = useState({
     supplierId: "",
     date: new Date().toISOString().split("T")[0],
@@ -78,7 +97,7 @@ export default function ProductPurchaseModule({ products, suppliers, categories 
   });
 
   const productsChart = useMemo(() => {
-    return products.slice(0, 8).map(p => ({
+    return (products || []).slice(0, 8).map(p => ({
       name: p.nama_produk || (p as any).name || '-',
       stock: p.stok || (p as any).stock || 0
     }));
@@ -250,7 +269,7 @@ export default function ProductPurchaseModule({ products, suppliers, categories 
                       className="w-full bg-slate-950/80 border border-white/10 text-slate-200 p-5 rounded-2xl text-sm focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all appearance-none uppercase"
                     >
                       <option value="">-- NO REGISTERED SUPPLIER --</option>
-                      {suppliers.map(s => <option key={s.id_supplier || (s as any).id} value={s.id_supplier || (s as any).id}>{s.nama_supplier || (s as any).name}</option>)}
+                      {suppliers?.map(s => <option key={s.id_supplier || (s as any).id} value={s.id_supplier || (s as any).id}>{s.nama_supplier || (s as any).name}</option>)}
                     </select>
                     <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none group-hover:text-cyan-400 transition-colors" />
                   </div>
@@ -280,7 +299,7 @@ export default function ProductPurchaseModule({ products, suppliers, categories 
                         className="w-full bg-slate-950/80 border border-white/10 text-slate-200 p-5 rounded-2xl text-sm focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all appearance-none uppercase"
                       >
                         <option value="">-- SELECT CATEGORY --</option>
-                        {categories.map(c => <option key={c.id_kategori || (c as any).id} value={c.id_kategori || (c as any).id}>{c.nama_kategori || (c as any).name}</option>)}
+                        {categories?.map(c => <option key={c.id_kategori || (c as any).id} value={c.id_kategori || (c as any).id}>{c.nama_kategori || (c as any).name}</option>)}
                       </select>
                       <ChevronDown size={18} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
                     </div>
@@ -424,13 +443,14 @@ export default function ProductPurchaseModule({ products, suppliers, categories 
         <div className="space-y-8">
           
           {/* STOCK MONITORING CHART */}
-          <GlassCard title="Inventory Dispersion" className="min-w-0">
-            <UltraSafeChart 
+           <GlassCard title="Inventory Dispersion" className="min-w-0">
+            <SafeChartContainer 
               loading={isSyncing} 
               data={productsChart} 
               height={320}
+              title="Inventory Distribution"
             >
-              <ResponsiveContainer width="99%" height="99%">
+              <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={productsChart}>
                   <defs>
                     <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
@@ -456,7 +476,7 @@ export default function ProductPurchaseModule({ products, suppliers, categories 
                   <Bar dataKey="stock" fill="url(#barGradient)" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
-            </UltraSafeChart>
+            </SafeChartContainer>
           </GlassCard>
 
           {/* QUICK LINKS / HELP */}
@@ -482,11 +502,15 @@ export default function ProductPurchaseModule({ products, suppliers, categories 
       {/* MODAL: ADD CATEGORY */}
       <AnimatePresence>
         {showCategoryModal && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md"
+            onClick={() => setShowCategoryModal(false)}
+          >
             <motion.div 
               initial={{ opacity: 0, scale: 0.9, rotateX: 20 }}
               animate={{ opacity: 1, scale: 1, rotateX: 0 }}
               exit={{ opacity: 0, scale: 0.9, rotateX: -20 }}
+              onClick={(e) => e.stopPropagation()}
               className="bg-slate-900 border border-white/10 p-10 rounded-[2.5rem] w-full max-w-md shadow-2xl space-y-8 relative overflow-hidden"
             >
               <div className="absolute -top-10 -right-10 w-32 h-32 bg-emerald-500/10 blur-3xl" />

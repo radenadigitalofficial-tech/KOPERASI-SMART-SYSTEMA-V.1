@@ -19,7 +19,7 @@ export default function TravelModule({ anggotaList }: { anggotaList: any[] }) {
     const unsub = onSnapshot(
       query(collection(db, 'service_travel'), orderBy('createdAt', 'desc')), 
       (s) => {
-        setData(s.docs.map(d => ({ id: d.id, ...d.data() })));
+        setData(s.docs?.map(d => ({ id: d.id, ...d.data() })));
         setLoading(false);
       },
       (error) => handleFirestoreError(error, OperationType.LIST, 'service_travel')
@@ -90,7 +90,7 @@ export default function TravelModule({ anggotaList }: { anggotaList: any[] }) {
             </tr>
           </thead>
           <tbody>
-            {data.map(item => (
+            {data?.map(item => (
               <tr key={item.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                 <td className="p-6">
                   <div className="text-xs font-bold text-white uppercase">{item.pkgName}</div>

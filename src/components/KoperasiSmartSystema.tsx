@@ -12,7 +12,7 @@ import ProductPurchaseModule from './ProductPurchaseModule';
 import { motion, AnimatePresence } from 'motion/react';
 import UnitJasaContainer from './UnitJasa/UnitJasaContainer';
 import RekapSimpananModule from './RekapSimpanan/RekapSimpananModule';
-import UltraSafeChart from './charts/UltraSafeChart';
+import SafeChartContainer from './SafeChartContainer';
 import ProfilKoperasiModule from '../modules/settings/profil-koperasi/ProfilKoperasiModule';
 import BackupModule from '../modules/settings/backup/BackupModule';
 import ResetModule from '../modules/settings/reset-data/ResetModule';
@@ -353,6 +353,38 @@ export default function KoperasiSmartSystema() {
       clearInterval(timer);
     };
   }, [user]);
+
+  // Modal & Popup Management
+  useEffect(() => {
+    // Auto-close all modals when menu changes to prevent ghost overlays
+    setEditingItem(null);
+    setDeleteMemberModal({ isOpen: false, data: null, isDeleting: false });
+    setShowCatModal(false);
+  }, [activeMenu]);
+
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setEditingItem(null);
+        setDeleteMemberModal({ isOpen: false, data: null, isDeleting: false });
+        setShowCatModal(false);
+      }
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, []);
+
+  useEffect(() => {
+    const isAnyModalOpen = !!editingItem || deleteMemberModal.isOpen || showCatModal;
+    if (isAnyModalOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "auto";
+    }
+    return () => {
+      document.body.style.overflow = "auto";
+    };
+  }, [editingItem, deleteMemberModal.isOpen, showCatModal]);
 
   // ==========================================
   // LOGIC HELPERS
@@ -733,7 +765,7 @@ export default function KoperasiSmartSystema() {
   // EXPORT FUNCTIONS
   // ==========================================
   const exportToExcel = () => {
-    const dataAnggota = anggota.map(a => {
+    const dataAnggota = (anggota || []).map(a => {
       const s = getSummaryPerAnggota(a.id_anggota);
       return {
         'Nama': a.nama,
@@ -792,7 +824,7 @@ export default function KoperasiSmartSystema() {
       headStyles: { fillColor: [6, 182, 212] }
     });
 
-    const memberData = anggota.map(a => {
+    const memberData = (anggota || []).map(a => {
       const s = getSummaryPerAnggota(a.id_anggota);
       return [
         a.nama,
@@ -1666,12 +1698,13 @@ export default function KoperasiSmartSystema() {
 
                  <div className="grid grid-cols-1 gap-4 min-w-0">
                   <GlassCard title="Grafik Trend Arus Kas (7 Hari Terakhir)" className="min-w-0">
-                    <UltraSafeChart 
+                    <SafeChartContainer 
                       loading={isLoading} 
                       data={lineChartData} 
                       height={320}
+                      title="Trend Arus Kas"
                     >
-                      <ResponsiveContainer width="99%" height="99%">
+                      <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={lineChartData}>
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                           <XAxis 
@@ -1715,14 +1748,14 @@ export default function KoperasiSmartSystema() {
                           />
                         </LineChart>
                       </ResponsiveContainer>
-                    </UltraSafeChart>
+                    </SafeChartContainer>
                   </GlassCard>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-w-0">
                   <GlassCard title="Transaksi Terbaru" className="min-w-0">
                     <div className="space-y-3">
-                      {transaksi.slice(-5).reverse().map((t, i) => (
+                      {transaksi?.slice(-5).reverse().map((t, i) => (
                         <div key={i} className="flex items-center justify-between p-4 glass border-white/5 rounded-2xl">
                           <div className="flex items-center gap-3">
                             <div className={`w-8 h-8 rounded-full border flex items-center justify-center ${
@@ -1792,7 +1825,7 @@ export default function KoperasiSmartSystema() {
                       </thead>
                       <tbody>
                         {/* New Collection Data */}
-                        {thirdPartyFunds.map((d, i) => (
+                        {thirdPartyFunds?.map((d, i) => (
                           <tr key={i} className="border-b border-white/5 hover:bg-white/5 transition-colors group">
                             <td className="py-4 px-4 text-xs font-mono text-slate-500">
                               {d.createdAt?.toDate?.() ? d.createdAt.toDate().toLocaleDateString('id-ID') : new Date(d.createdAt).toLocaleDateString('id-ID')}
@@ -1813,7 +1846,7 @@ export default function KoperasiSmartSystema() {
                           </tr>
                         ))}
                         {/* Legacy Data */}
-                        {dpkList.map((d, i) => (
+                        {dpkList?.map((d, i) => (
                           <tr key={'legacy-'+i} className="border-b border-white/5 hover:bg-white/5 transition-colors group opacity-70 italic">
                             <td className="py-4 px-4 text-xs font-mono text-slate-500">
                               {d.tanggal?.toDate?.() ? d.tanggal.toDate().toLocaleDateString('id-ID') : new Date(d.tanggal).toLocaleDateString('id-ID')}
@@ -1897,7 +1930,7 @@ export default function KoperasiSmartSystema() {
                               </tr>
                             </thead>
                             <tbody className="text-[10px]">
-                              {simulationResult.jadwal.map((j, i) => (
+                              {simulationResult?.jadwal?.map((j: any, i: number) => (
                                 <tr key={i} className="border-b border-white/5">
                                   <td className="p-3 font-mono text-cyan-400">#{j.angsuran_ke}</td>
                                   <td className="p-3 text-slate-300">{j.tanggal.toLocaleDateString('id-ID')}</td>
@@ -1927,7 +1960,7 @@ export default function KoperasiSmartSystema() {
                             </tr>
                           </thead>
                           <tbody>
-                            {loans.map((l, i) => {
+                            {loans?.map((l, i) => {
                               const paid = installments.filter(ins => ins.id_pinjaman === l.id_pinjaman && ins.status === 'SUDAH').reduce((a, c) => a + c.nominal, 0);
                               const sisa = l.total_tagihan - paid;
                               return (
@@ -1989,7 +2022,7 @@ export default function KoperasiSmartSystema() {
                         <div className="space-y-4">
                           <p className="text-[10px] text-slate-400 uppercase font-mono tracking-widest">Installment Matrix: {selectedLoanId}</p>
                           <div className="space-y-2 h-[450px] overflow-y-auto pr-2">
-                             {installments
+                             {(installments || [])
                                 .filter(ins => ins.id_pinjaman === selectedLoanId)
                                 .sort((a, b) => a.angsuran_ke - b.angsuran_ke)
                                 .map((ins, i) => (
@@ -2076,7 +2109,7 @@ export default function KoperasiSmartSystema() {
                           className="w-full bg-transparent border-none text-white text-sm focus:outline-none"
                         >
                           <option value="" className="bg-[#020617]">Guest Customer</option>
-                          {anggota.map(a => (
+                          {anggota?.map(a => (
                             <option key={a.id_anggota} value={a.id_anggota} className="bg-[#020617]">{a.nama} ({a.id_anggota})</option>
                           ))}
                         </select>
@@ -2086,7 +2119,7 @@ export default function KoperasiSmartSystema() {
 
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {products
-                      .filter(p => p.nama_produk.toLowerCase().includes(searchProduct.toLowerCase()))
+                      ?.filter(p => p.nama_produk.toLowerCase().includes(searchProduct.toLowerCase()))
                       .map(product => (
                         <motion.div 
                           key={product.id_produk}
@@ -2118,7 +2151,7 @@ export default function KoperasiSmartSystema() {
                   <GlassCard title="Transaction Cart" className="min-w-0">
                     <div className="flex flex-col h-full min-h-[500px]">
                       <div className="flex-1 space-y-4 mb-6">
-                        {cart.map((item, i) => (
+                        {cart?.map((item, i) => (
                           <div key={i} className="flex items-center gap-3 p-3 glass border-white/5 rounded-2xl animate-in slide-in-from-right duration-300">
                             <div className="flex-1">
                               <h5 className="text-[11px] font-bold text-white uppercase">{item.product.nama_produk}</h5>
@@ -2218,8 +2251,8 @@ export default function KoperasiSmartSystema() {
                            </tr>
                          </thead>
                          <tbody>
-                            {products.length > 0 ? (
-                              products.map(p => (
+                            {products?.length > 0 ? (
+                              products?.map(p => (
                                 <tr key={p.id_produk} className="border-b border-white/5 hover:bg-white/5 transition-colors group">
                                   <td className="p-4">
                                     <div className="text-xs font-bold text-white uppercase">{p.nama_produk || (p as any).name}</div>
@@ -2286,7 +2319,7 @@ export default function KoperasiSmartSystema() {
                           </tr>
                         </thead>
                         <tbody>
-                          {sales.filter(s => s.metode_bayar === 'KASBON').map((sale, i) => (
+                          {sales?.filter(s => s.metode_bayar === 'KASBON').map((sale, i) => (
                             <tr key={i} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                               <td className="py-4 px-4 text-xs font-mono text-slate-500">
                                 {new Date(sale.tanggal?.toDate?.() || sale.tanggal).toLocaleDateString('id-ID')}
@@ -2367,7 +2400,7 @@ export default function KoperasiSmartSystema() {
                           </tr>
                         </thead>
                         <tbody>
-                          {anggota.map(a => {
+                          {anggota?.map(a => {
                             const nodeSales = sales.filter(s => s.id_anggota === a.id_anggota);
                             const total = nodeSales.reduce((acc, s) => acc + s.total_bayar, 0);
                             if (total === 0) return null;
@@ -2389,7 +2422,7 @@ export default function KoperasiSmartSystema() {
 
                   <GlassCard title="Log Penjualan Terakhir" className="min-w-0">
                     <div className="space-y-3">
-                        {sales.slice().reverse().slice(0, 10).map((sale, i) => (
+                        {sales?.slice().reverse().slice(0, 10).map((sale: any, i: number) => (
                           <div key={i} className="p-3 glass rounded-xl border-white/5 flex items-center justify-between text-[10px] font-mono">
                             <div>
                                <div className="text-white font-bold uppercase">{sale.id_penjualan}</div>
@@ -2429,7 +2462,7 @@ export default function KoperasiSmartSystema() {
                             </tr>
                           </thead>
                           <tbody>
-                            {suppliers.map(s => (
+                            {suppliers?.map(s => (
                               <tr key={s.id_supplier} className="border-b border-white/5 hover:bg-white/5 font-mono text-xs">
                                 <td className="p-4">
                                   <div className="text-white font-bold">{s.nama_supplier}</div>
@@ -2470,7 +2503,7 @@ export default function KoperasiSmartSystema() {
                             </tr>
                           </thead>
                           <tbody>
-                            {kategoriList.map(cat => (
+                            {kategoriList?.map(cat => (
                               <tr key={cat.id_kategori} className="border-b border-white/5 hover:bg-white/5 font-mono text-xs">
                                 <td className="p-4">
                                   <div className="text-white font-bold">{cat.nama_kategori}</div>
@@ -2503,7 +2536,7 @@ export default function KoperasiSmartSystema() {
 
                    <GlassCard title="Purchasing Registry Log" className="min-w-0">
                        <div className="space-y-4">
-                          {pembelianList.slice().reverse().map((p, i) => (
+                          {pembelianList?.slice().reverse().map((p, i) => (
                             <div key={i} className="p-4 glass rounded-2xl border-white/5 text-[10px] font-mono group">
                                <div className="flex justify-between items-center mb-2">
                                   <span className="text-cyan-400 font-bold uppercase">{p.id_pembelian}</span>
@@ -2515,7 +2548,7 @@ export default function KoperasiSmartSystema() {
                                   </div>
                                </div>
                                <div className="space-y-1 pl-2 border-l border-white/5">
-                                  {p.items.map((it, idx) => (
+                                  {p.items?.map((it, idx) => (
                                     <div key={idx} className="flex justify-between text-slate-500">
                                        <span>{it.nama_produk} x {it.qty}</span>
                                        <span>Rp {(it.qty * it.harga_modal).toLocaleString('id-ID')}</span>
@@ -2603,12 +2636,13 @@ export default function KoperasiSmartSystema() {
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 min-w-0">
                   <GlassCard title="Komposisi Aset Koperasi" className="min-w-0">
-                    <UltraSafeChart 
+                    <SafeChartContainer 
                       loading={isLoading} 
                       data={chartData} 
                       height={320}
+                      title="Aset Komposisi"
                     >
-                      <ResponsiveContainer width="99%" height="99%">
+                      <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
                             data={chartData}
@@ -2619,7 +2653,7 @@ export default function KoperasiSmartSystema() {
                             paddingAngle={5}
                             dataKey="value"
                           >
-                            {chartData.map((entry, index) => (
+                            {(chartData || []).map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={entry.color} />
                             ))}
                           </Pie>
@@ -2630,7 +2664,7 @@ export default function KoperasiSmartSystema() {
                           <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '20px' }} />
                         </PieChart>
                       </ResponsiveContainer>
-                    </UltraSafeChart>
+                    </SafeChartContainer>
                   </GlassCard>
 
                   <GlassCard title="Detail Aset Ledger" className="min-w-0">
@@ -2668,7 +2702,7 @@ export default function KoperasiSmartSystema() {
                         </tr>
                       </thead>
                       <tbody>
-                        {anggota.map((a, i) => {
+                        {(anggota || []).map((a, i) => {
                           const s = getSummaryPerAnggota(a.id_anggota);
                           const simpanan = s.pokok + s.wajib + s.sukarela;
                           const totalNode = simpanan + s.tabungan;
@@ -2709,7 +2743,7 @@ export default function KoperasiSmartSystema() {
                         </tr>
                       </thead>
                       <tbody>
-                        {anggota.slice((currentPageAnggota - 1) * itemsPerPage, currentPageAnggota * itemsPerPage).map((a, i) => {
+                        {(anggota || []).slice((currentPageAnggota - 1) * itemsPerPage, currentPageAnggota * itemsPerPage).map((a, i) => {
                           const s = getSummaryPerAnggota(a.id_anggota);
                           return (
                             <tr key={i} className="border-b border-white/5 hover:bg-white/5 transition-colors group">
@@ -2757,7 +2791,7 @@ export default function KoperasiSmartSystema() {
                           className="bg-transparent text-slate-200 focus:outline-none text-xs font-mono"
                         >
                           <option value="ALL">ALL NETWORK NODES</option>
-                          {anggota.map(a => (
+                          {(anggota || []).map(a => (
                             <option key={a.id_anggota} value={a.id_anggota}>{a.nama} ({a.id_anggota})</option>
                           ))}
                         </select>
@@ -2788,7 +2822,7 @@ export default function KoperasiSmartSystema() {
                             
                             return (
                               <>
-                                {paginated.map((t, i) => (
+                                {(paginated || []).map((t, i) => (
                                   <tr key={i} className="border-b border-white/5 text-[10px] font-mono group">
                                     <td className="py-3 px-4 text-slate-500">{t.tanggal?.toDate?.() ? t.tanggal.toDate().toLocaleDateString('id-ID') : new Date(t.tanggal).toLocaleDateString('id-ID')}</td>
                                     <td className="py-3 px-4 text-slate-300">{t.id_anggota}</td>
@@ -2840,11 +2874,15 @@ export default function KoperasiSmartSystema() {
 
         <AnimatePresence>
           {deleteMemberModal.isOpen && deleteMemberModal.data && (
-            <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-slate-950/90 backdrop-blur-md">
+            <div 
+              className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-950/90 backdrop-blur-md"
+              onClick={() => setDeleteMemberModal({ isOpen: false, data: null, isDeleting: false })}
+            >
               <motion.div 
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
+                onClick={(e) => e.stopPropagation()}
                 className="w-full max-w-md glass border border-red-500/30 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(239,68,68,0.2)]"
               >
                 <div className="p-6 bg-red-500/10 border-b border-red-500/20 flex items-center gap-4">
@@ -2927,12 +2965,16 @@ export default function KoperasiSmartSystema() {
 
         <AnimatePresence>
           {editingItem && (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-950/80 backdrop-blur-sm">
+            <div 
+              className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-950/80 backdrop-blur-sm"
+              onClick={() => setEditingItem(null)}
+            >
               <motion.div 
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                className="w-full max-w-xl glass border border-white/10 rounded-3xl overflow-hidden shadow-2xl relative"
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-xl glass border border-white/10 rounded-3xl overflow-hidden shadow-2xl relative max-h-[90vh] overflow-y-auto"
               >
                 <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/5">
                   <div>
@@ -3064,11 +3106,11 @@ const FormTransaksi = ({ onSubmit, anggota, defaultValue }: { onSubmit: (e: Reac
           </div>
         </div>
         
-        <div className="flex flex-col gap-2">
+         <div className="flex flex-col gap-2">
           <label className="text-[10px] font-mono text-cyan-400 uppercase tracking-widest font-bold">Pilih Anggota</label>
           <select name="id_anggota_trx" defaultValue={defaultValue?.id_anggota} required className="bg-slate-950/50 border border-white/10 text-slate-200 p-3.5 rounded-xl focus:outline-none focus:border-cyan-400/50 transition-all text-sm">
-            {anggota.map(a => <option key={a.id_anggota} value={a.id_anggota}>{a.nama} ({a.id_anggota})</option>)}
-            {anggota.length === 0 && <option value="">Belum ada anggota</option>}
+            {anggota?.map(a => <option key={a.id_anggota} value={a.id_anggota}>{a.nama} ({a.id_anggota})</option>)}
+            {(anggota?.length === 0 || !anggota) && <option value="">Belum ada anggota</option>}
           </select>
         </div>
 
@@ -3186,7 +3228,7 @@ const FormPinjaman = ({ onSubmit, anggota, handleSimulasi, simulationResult, def
       <div className="flex flex-col gap-2">
         <label className="text-[10px] font-mono text-cyan-400 uppercase font-bold">Pilih Anggota</label>
         <select name="id_anggota_pjm" defaultValue={defaultValue?.id_anggota} required className="bg-slate-950/50 border border-white/10 text-slate-200 p-3.5 rounded-xl text-sm">
-          {anggota.map(a => <option key={a.id_anggota} value={a.id_anggota}>{a.nama} ({a.id_anggota})</option>)}
+          {anggota?.map((a: any) => <option key={a.id_anggota} value={a.id_anggota}>{a.nama} ({a.id_anggota})</option>)}
         </select>
       </div>
       <InputBox name="jumlah_pinjaman" label="Jumlah Pinjaman" type="number" placeholder="Rp 0" defaultValue={defaultValue?.jumlah_pinjaman} required />
@@ -3237,13 +3279,13 @@ const RestockSystem = ({ products, suppliers, onSubmit }: { products: Produk[], 
           className="bg-slate-950/50 border border-white/10 text-slate-200 p-3.5 rounded-xl text-sm"
         >
           <option value="">-- SELECT SUPPLIER --</option>
-          {suppliers.map(s => <option key={s.id_supplier} value={s.id_supplier}>{s.nama_supplier}</option>)}
+          {suppliers?.map(s => <option key={s.id_supplier} value={s.id_supplier}>{s.nama_supplier}</option>)}
         </select>
       </div>
 
       <div className="space-y-4">
         <label className="text-[10px] font-mono text-cyan-400 uppercase font-bold">Daftar Item Belanja</label>
-        {tempItems.map((item, idx) => (
+        {tempItems?.map((item, idx) => (
           <div key={idx} className="grid grid-cols-4 gap-3 items-end glass p-3 rounded-xl border-white/5">
             <div className="col-span-1 text-[10px] text-white font-bold truncate">{item.nama_produk}</div>
             <div className="flex flex-col gap-1">
@@ -3285,7 +3327,7 @@ const RestockSystem = ({ products, suppliers, onSubmit }: { products: Produk[], 
             className="bg-white/5 border border-white/5 text-slate-500 p-2 rounded text-[10px]"
            >
               <option value="">+ ADD ITEM FROM REPOSITORY</option>
-              {products.map(p => <option key={p.id_produk} value={p.id_produk}>{p.nama_produk} (Stock: {p.stok})</option>)}
+              {products?.map(p => <option key={p.id_produk} value={p.id_produk}>{p.nama_produk} (Stock: {p.stok})</option>)}
            </select>
         </div>
       </div>
@@ -3356,7 +3398,7 @@ const FormProduk = ({ onSubmit, defaultValue, kategoriList, suppliers, onAddCate
               className="bg-slate-950/80 border border-white/10 text-slate-200 p-4 rounded-2xl text-sm focus:ring-2 focus:ring-cyan-500/50 outline-none transition-all appearance-none"
             >
               <option value="">-- BELI BEBAS --</option>
-              {suppliers.map(s => <option key={s.id_supplier} value={s.id_supplier}>{s.nama_supplier}</option>)}
+              {suppliers?.map(s => <option key={s.id_supplier} value={s.id_supplier}>{s.nama_supplier}</option>)}
             </select>
           </div>
           <div className="flex flex-col gap-2">
@@ -3390,7 +3432,7 @@ const FormProduk = ({ onSubmit, defaultValue, kategoriList, suppliers, onAddCate
               required
             >
               <option value="">-- SELECT CATEGORY --</option>
-              {kategoriList.map(cat => <option key={cat.id_kategori} value={cat.nama_kategori}>{cat.nama_kategori}</option>)}
+              {kategoriList?.map(cat => <option key={cat.id_kategori} value={cat.nama_kategori}>{cat.nama_kategori}</option>)}
             </select>
           </div>
           <InputBox name="nama_produk" label="4. Product Designation" placeholder="Input product name..." defaultValue={defaultValue?.nama_produk} required />
@@ -3537,10 +3579,14 @@ const CategoryModal = ({ isOpen, onClose, onAdd }: { isOpen: boolean, onClose: (
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md"
+      onClick={onClose}
+    >
       <motion.div 
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
+        onClick={(e) => e.stopPropagation()}
         className="bg-slate-900 border border-white/10 p-8 rounded-3xl w-full max-w-md shadow-2xl space-y-6"
       >
         <div className="space-y-2">
