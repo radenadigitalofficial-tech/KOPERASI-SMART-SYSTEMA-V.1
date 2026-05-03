@@ -1,0 +1,6 @@
+{
+  "name": "Koperasi Smart Systema",
+  "description": "Futuristic cooperative management system with real-time Firestore tracking, Google Sheets sync, and AI-powered smart reporting using Gemini.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

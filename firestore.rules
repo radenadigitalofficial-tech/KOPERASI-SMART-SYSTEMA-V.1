@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // helper functions
+    function isSignedIn() { return request.auth != null; }
+    function isVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
+    function isAdmin() { return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+
+    // GLOBAL SAFETY NET
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // RBAC
+    match /admins/{userId} {
+      allow get: if isSignedIn() && request.auth.uid == userId;
+      allow write: if isAdmin() || (isSignedIn() && request.auth.token.email == 'radena.digital@gmail.com');
+    }
+
+    // COUNTERS
+    match /counters/{id} {
+      allow read, write: if isVerified();
+    }
+
+    // MAIN COLLECTIONS
+    match /anggota/{id} {
+      allow read: if isVerified();
+      allow write: if isAdmin();
+    }
+
+    match /transaksi/{id} {
+      allow read: if isVerified();
+      allow write: if isAdmin();
+    }
+
+    match /settings/{id} {
+      allow read: if isVerified();
+      allow write: if isAdmin();
+    }
+
+    // SAVINGS & LOANS
+    match /mandatory_savings/{id} { allow read: if isVerified(); allow write: if isAdmin(); }
+    match /voluntary_savings/{id} { allow read: if isVerified(); allow write: if isAdmin(); }
+    match /member_savings/{id} { allow read: if isVerified(); allow write: if isAdmin(); }
+    match /pinjaman/{id} { allow read: if isVerified(); allow write: if isAdmin(); }
+    match /cicilan/{id} { allow read: if isVerified(); allow write: if isAdmin(); }
+
+    // POS & INVENTORY
+    match /products/{id} { allow read: if isVerified(); allow write: if isAdmin(); }
+    match /penjualan/{id} { allow read: if isVerified(); allow write: if isVerified(); }
+    match /suppliers/{id} { allow read: if isVerified(); allow write: if isAdmin(); }
+    match /product_categories/{id} { allow read: if isVerified(); allow write: if isAdmin(); }
+    match /purchase_transactions/{id} { allow read: if isVerified(); allow write: if isAdmin(); }
+
+    // UNITS JASA
+    match /service_travel/{id} { allow read, write: if isVerified(); }
+    match /service_gor/{id} { allow read, write: if isVerified(); }
+    match /service_ppob/{id} { allow read, write: if isVerified(); }
+    match /service_printing/{id} { allow read, write: if isVerified(); }
+    match /service_digital/{id} { allow read, write: if isVerified(); }
+    match /service_credit_goods/{id} { allow read, write: if isVerified(); }
+
+    // EXTERNAL FUNDS
+    match /third_party_funds/{id} { allow read: if isVerified(); allow write: if isAdmin(); }
+    match /dana_pihak_ketiga/{id} { allow read: if isVerified(); allow write: if isAdmin(); }
+    
+    // PROFILE
+    match /cooperative_management/{id} { allow read: if isVerified(); allow write: if isAdmin(); }
+    match /cooperative_supervisors/{id} { allow read: if isVerified(); allow write: if isAdmin(); }
+    match /cooperative_profile/{id} { allow read: if isVerified(); allow write: if isAdmin(); }
+
+    // AUDIT
+    match /audit_logs/{docId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if false;
+    }
+  }
+}

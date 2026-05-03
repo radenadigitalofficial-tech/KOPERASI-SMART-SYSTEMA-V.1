@@ -1,0 +1,134 @@
+{
+  "entities": {
+    "Anggota": {
+      "title": "Anggota",
+      "description": "Data anggota koperasi",
+      "type": "object",
+      "properties": {
+        "id_anggota": { "type": "string" },
+        "nama": { "type": "string" },
+        "no_hp": { "type": "string" },
+        "alamat": { "type": "string" },
+        "status": { "type": "string", "enum": ["Aktif", "Non-Aktif"] },
+        "tanggal_daftar": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id_anggota", "nama", "no_hp", "alamat", "status", "tanggal_daftar"]
+    },
+    "Transaksi": {
+      "title": "Transaksi",
+      "description": "Data transaksi keuangan koperasi",
+      "type": "object",
+      "properties": {
+        "id_transaksi": { "type": "string" },
+        "id_anggota": { "type": "string" },
+        "jenis": { "type": "string", "enum": ["POKOK", "WAJIB", "SUKARELA", "TABUNG", "PINJAM", "CICIL"] },
+        "tipe": { "type": "string", "enum": ["MASUK", "KELUAR"] },
+        "nominal": { "type": "number" },
+        "keterangan": { "type": "string" },
+        "tanggal": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id_transaksi", "id_anggota", "jenis", "tipe", "nominal", "tanggal"]
+    },
+    "KoperasiManagement": {
+      "title": "Person Management",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "position": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "anggota": {
+      "schema": "Anggota",
+      "description": "Koleksi data anggota"
+    },
+    "transaksi": {
+      "schema": "Transaksi",
+      "description": "Koleksi data transaksi"
+    },
+    "dana_pihak_ketiga": {
+      "schema": "Transaksi",
+      "description": "Koleksi dana dari pihak luar koperasi (Legacy)"
+    },
+    "third_party_funds": {
+      "schema": "Transaksi",
+      "description": "Koleksi dana dari pihak luar koperasi (New)"
+    },
+    "pinjaman": {
+      "schema": "Transaksi",
+      "description": "Data pinjaman anggota"
+    },
+    "cicilan": {
+      "schema": "Transaksi",
+      "description": "Data cicilan pembayaran pinjaman"
+    },
+    "products": {
+      "schema": "Transaksi",
+      "description": "Koleksi data produk warung koperasi"
+    },
+    "penjualan": {
+      "schema": "Transaksi",
+      "description": "Koleksi data transaksi penjualan POS"
+    },
+    "suppliers": {
+      "schema": "Transaksi",
+      "description": "Data supplier barang"
+    },
+    "product_categories": {
+      "schema": "Transaksi",
+      "description": "Kategori produk inventori"
+    },
+    "purchase_transactions": {
+      "schema": "Transaksi",
+      "description": "Riwayat restock produk"
+    },
+    "mandatory_savings": {
+      "schema": "Transaksi",
+      "description": "Record Simpanan Wajib"
+    },
+    "voluntary_savings": {
+      "schema": "Transaksi",
+      "description": "Record Simpanan Sukarela"
+    },
+    "member_savings": {
+      "schema": "Transaksi",
+      "description": "Record Tabungan Anggota"
+    },
+    "service_travel": { "schema": "Transaksi", "description": "Transaksi Jasa Travel" },
+    "service_gor": { "schema": "Transaksi", "description": "Transaksi Jasa Sewa GOR" },
+    "service_ppob": { "schema": "Transaksi", "description": "Transaksi Jasa PPOB" },
+    "service_printing": { "schema": "Transaksi", "description": "Transaksi Jasa Percetakan" },
+    "service_digital": { "schema": "Transaksi", "description": "Transaksi Jasa Digital" },
+    "service_credit_goods": { "schema": "Transaksi", "description": "Transaksi Kredit Barang" },
+    "cooperative_management": { "schema": "KoperasiManagement", "description": "Data Pengurus" },
+    "cooperative_supervisors": { "schema": "KoperasiManagement", "description": "Data Pengawas" },
+    "cooperative_profile": { "schema": "KoperasiManagement", "description": "Profil Institusi" },
+    "settings": { "schema": "KoperasiManagement", "description": "Konfigurasi Global" },
+    "admins": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string" },
+          "role": { "type": "string", "enum": ["ADMIN", "MANAGER"] }
+        }
+      },
+      "description": "Koleksi White-list Administrator"
+    },
+    "audit_logs": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string" },
+          "userEmail": { "type": "string" },
+          "action": { "type": "string" },
+          "collection": { "type": "string" },
+          "docId": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "payload": { "type": "object" }
+        }
+      },
+      "description": "Log aktivitas sistem"
+    }
+  }
+}
