@@ -256,7 +256,7 @@ export default function RekapSimpananModule({ anggotaList }: { anggotaList: Memb
       </div>
 
       {/* DASHBOARD STATS */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard 
           label="Total Managed Liquidity" 
           value={`Rp ${stats.grandTotalValue.toLocaleString('id-ID')}`} 
@@ -270,13 +270,6 @@ export default function RekapSimpananModule({ anggotaList }: { anggotaList: Memb
           subLabel="Full Compliance (12/12)"
           icon={<CheckCircle2 className="text-indigo-400" />}
           color="indigo"
-        />
-        <StatCard 
-          label="Payment Latency" 
-          value={stats.menunggak.toString()} 
-          subLabel="Pending Contributions"
-          icon={<AlertCircle className="text-orange-400" />}
-          color="orange"
         />
         <StatCard 
           label="Mandatory Velocity" 

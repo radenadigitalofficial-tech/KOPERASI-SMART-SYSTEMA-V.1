@@ -38,6 +38,10 @@ export const signInWithGoogle = async () => {
         "3. Also ensure 'localhost' and your Cloud Run domains are listed."
       );
       alert("Error: Unauthorized Domain. Please add '" + currentDomain + "' to your Firebase Authorized Domains list in the Firebase Console.");
+    } else if (error.code === 'auth/popup-closed-by-user') {
+      console.info("Info: User closed the authentication popup before completion.");
+      // We don't throw or alert here, as it's a deliberate user action to cancel sign-in
+      return null;
     }
     throw error;
   }

@@ -6,7 +6,7 @@ import {
   FileDown, Printer, Edit2, Trash2, X, Settings,
   ShoppingBag, Plus, Minus, Trash, PlusCircle, Package, Truck, ChevronDown,
   ChevronLeft, ChevronRight, Shield,
-  TrendingUp, Briefcase
+  TrendingUp, Briefcase, AlertCircle, Loader2, ShieldAlert
 } from 'lucide-react';
 import ProductPurchaseModule from './ProductPurchaseModule';
 import { motion, AnimatePresence } from 'motion/react';
@@ -207,6 +207,11 @@ export default function KoperasiSmartSystema() {
   } | null>(null);
 
   const [isAdmin, setIsAdmin] = useState(false);
+  const [deleteMemberModal, setDeleteMemberModal] = useState<{ 
+    isOpen: boolean; 
+    data: Anggota | null;
+    isDeleting: boolean;
+  }>({ isOpen: false, data: null, isDeleting: false });
 
   // Pagination State
   const [currentPageAnggota, setCurrentPageAnggota] = useState(1);
@@ -270,13 +275,13 @@ export default function KoperasiSmartSystema() {
 
     // Realtime Anggota
     const unsubAnggota = onSnapshot(collection(db, 'anggota'), (snapshot) => {
-      setAnggota(snapshot.docs.map(doc => doc.data() as Anggota).filter(a => !(a as any).deleted));
+      setAnggota(snapshot.docs.map(doc => doc.data() as Anggota).filter(a => !(a as any).isDeleted && !(a as any).deleted));
       setIsLoading(false);
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'anggota'));
 
     // Realtime Transaksi
     const unsubTransaksi = onSnapshot(collection(db, 'transaksi'), (snapshot) => {
-      setTransaksi(snapshot.docs.map(doc => doc.data() as Transaksi).filter(t => !(t as any).deleted));
+      setTransaksi(snapshot.docs.map(doc => doc.data() as Transaksi).filter(t => !(t as any).isDeleted && !(t as any).deleted));
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'transaksi'));
 
     // Realtime DPK
@@ -1000,37 +1005,72 @@ export default function KoperasiSmartSystema() {
   // ==========================================
   // DELETE HANDLERS
   // ==========================================
+  const triggerHapusAnggota = (target: Anggota) => {
+    setDeleteMemberModal({ isOpen: true, data: target, isDeleting: false });
+  };
+
   const hapusAnggota = async (id: string) => {
-    if (!confirm('Yakin ingin menghapus node anggota ini? Semua data terkait (transaksi & pinjaman) akan dicek.')) return;
-    
+    // Permission Verification
+    if (!isAdmin) {
+      alert('Akses Ditolak: Hanya Admin atau Super Admin yang dapat mengeksekusi penghapusan.');
+      return;
+    }
+
     try {
-      // Validasi: Cek apakah ada transaksi atau pinjaman
-      const hasTrx = transaksi.some(t => t.id_anggota === id);
-      const hasLoan = loans.some(l => l.id_anggota === id);
+      setDeleteMemberModal(prev => ({ ...prev, isDeleting: true }));
+      
+      const batch = writeBatch(db);
+      const memberDocRef = doc(db, 'anggota', id);
 
-      if (hasTrx || hasLoan) {
-        alert('Gagal: Anggota ini memiliki data transaksi/pinjaman aktif. Hapus data tersebut terlebih dahulu.');
-        return;
-      }
-
-      await updateDoc(doc(db, 'anggota', id), { 
-        deleted: true, 
-        deletedAt: serverTimestamp() 
+      // Perform Soft Delete update according to spec
+      batch.update(memberDocRef, { 
+        isDeleted: true,
+        deletedAt: serverTimestamp(),
+        deletedBy: user?.uid || 'unknown',
+        status: "DELETED"
       });
+
+      // Also cascade soft delete to related data node
+      // Note: We follow the instruction to NOT hard delete
+      
+      const trxToHide = transaksi.filter(t => t.id_anggota === id);
+      trxToHide.forEach(t => {
+        batch.update(doc(db, 'transaksi', t.id_transaksi), {
+          isDeleted: true,
+          deletedAt: serverTimestamp(),
+          status: 'ARCHIVED'
+        });
+      });
+
+      const loansToHide = loans.filter(l => l.id_anggota === id);
+      loansToHide.forEach(l => {
+        batch.update(doc(db, 'pinjaman', l.id_pinjaman), {
+          isDeleted: true,
+          deletedAt: serverTimestamp(),
+          status: 'DELETED'
+        });
+      });
+
+      await batch.commit();
+
       if (user) {
         await logAudit({
-          action: 'DELETE_MEMBER',
+          action: 'DELETE_MEMBER_SOFT',
           module: 'PENGURUSAN',
-          description: `Menonaktifkan anggota ID: ${id}`,
+          description: `Soft delete anggota ID: ${id}. Seluruh data terkait diarsipkan.`,
           userId: user.uid,
           userName: user.displayName || user.email || 'Admin',
           targetId: id,
-          severity: 'WARNING'
+          severity: 'CRITICAL'
         });
       }
-      alert('Node anggota berhasil dinonaktifkan (Soft Delete).');
+
+      alert('Berhasil: Data anggota telah dipindahkan ke registry arsip (Soft Delete).');
+      setDeleteMemberModal({ isOpen: false, data: null, isDeleting: false });
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, 'anggota');
+    } finally {
+      setDeleteMemberModal(prev => ({ ...prev, isDeleting: false }));
     }
   };
 
@@ -2685,7 +2725,7 @@ export default function KoperasiSmartSystema() {
                               <td className="py-4 px-4 text-center">
                                 <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                   <button onClick={() => setEditingItem({ type: 'anggota_list', data: a })} className="p-1.5 text-slate-400 hover:text-cyan-400 transition-colors"><Edit2 size={12} /></button>
-                                  <button onClick={() => hapusAnggota(a.id_anggota)} className="p-1.5 text-slate-400 hover:text-red-400 transition-colors"><Trash2 size={12} /></button>
+                                  <button onClick={() => triggerHapusAnggota(a)} className="p-1.5 text-slate-400 hover:text-red-400 transition-colors"><Trash2 size={12} /></button>
                                 </div>
                               </td>
                             </tr>
@@ -2797,6 +2837,93 @@ export default function KoperasiSmartSystema() {
             © 2026 @Radena Digital Agency
           </p>
         </footer>
+
+        <AnimatePresence>
+          {deleteMemberModal.isOpen && deleteMemberModal.data && (
+            <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-slate-950/90 backdrop-blur-md">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="w-full max-w-md glass border border-red-500/30 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(239,68,68,0.2)]"
+              >
+                <div className="p-6 bg-red-500/10 border-b border-red-500/20 flex items-center gap-4">
+                  <div className="p-3 bg-red-500/20 rounded-2xl text-red-400">
+                    <ShieldAlert size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white uppercase italic tracking-tighter">Konfirmasi Terminasi Node</h3>
+                    <p className="text-[10px] text-red-400/70 font-mono uppercase">Security Protocol: Action Required</p>
+                  </div>
+                </div>
+
+                <div className="p-8 space-y-6">
+                  <div className="space-y-4 p-4 bg-white/5 rounded-2xl border border-white/10">
+                    <div className="flex justify-between items-center text-[10px] font-mono">
+                      <span className="text-slate-500 uppercase">Nama Anggota</span>
+                      <span className="text-white font-bold">{deleteMemberModal.data.nama}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] font-mono">
+                      <span className="text-slate-500 uppercase">ID Anggota</span>
+                      <span className="text-cyan-400">{deleteMemberModal.data.id_anggota}</span>
+                    </div>
+                  </div>
+
+                  {(() => {
+                    const s = getSummaryPerAnggota(deleteMemberModal.data.id_anggota);
+                    const hasActiveData = s.pokok > 0 || s.wajib > 0 || s.sukarela > 0 || s.tabungan > 0 || s.sisa_pinjam > 0;
+                    
+                    return (
+                      <div className={`p-4 rounded-2xl border ${hasActiveData ? 'bg-orange-500/10 border-orange-500/20' : 'bg-slate-900/50 border-white/5'}`}>
+                        <div className="flex gap-3">
+                          <AlertCircle size={16} className={hasActiveData ? 'text-orange-400' : 'text-slate-500'} />
+                          <div className="space-y-1">
+                            <p className="text-[10px] font-bold text-white uppercase tracking-tight">Analisis Ledger</p>
+                            <p className="text-[9px] text-slate-400 leading-relaxed">
+                              {hasActiveData 
+                                ? "WARNING: Anggota memiliki saldo aktif. Seluruh saldo akan diarsipkan namun tidak dapat ditarik setelah penghapusan."
+                                : "Node ini bersih. Tidak ada saldo aktif yang terdeteksi."
+                              }
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })()}
+
+                  <div className="p-4 bg-red-500/5 border border-red-500/10 rounded-2xl">
+                    <p className="text-[9px] text-red-300 italic text-center">
+                      "Tindakan ini bersifat permanen dalam registry aktif. Seluruh riwayat transaksi akan ditandai sebagai ARCHIVED."
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={() => setDeleteMemberModal({ isOpen: false, data: null, isDeleting: false })}
+                      className="flex-1 py-3 bg-white/5 hover:bg-white/10 text-white text-[10px] font-bold rounded-xl transition-all uppercase tracking-widest border border-white/10"
+                    >
+                      Batal
+                    </button>
+                    <button 
+                      disabled={deleteMemberModal.isDeleting}
+                      onClick={() => hapusAnggota(deleteMemberModal.data!.id_anggota)}
+                      className="flex-1 py-3 bg-red-600 hover:bg-red-500 text-white text-[10px] font-bold rounded-xl transition-all uppercase tracking-widest shadow-[0_0_20px_rgba(220,38,38,0.3)] flex items-center justify-center gap-2"
+                    >
+                      {deleteMemberModal.isDeleting ? (
+                        <>
+                          <Loader2 size={14} className="animate-spin" />
+                          Processing
+                        </>
+                      ) : (
+                        "Hapus Anggota"
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
 
         <AnimatePresence>
           {editingItem && (
